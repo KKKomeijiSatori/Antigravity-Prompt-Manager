@@ -1,0 +1,19 @@
+{
+  "name": "antigravity-prompt-manager",
+  "displayName": "Antigravity 提示词与规则管理器 (Prompt & Rule Manager)",
+  "description": "Google Antigravity 专属的动态 AGENTS.md 工作区提示词管理插件。支持随工作区自动匹配与注入、模块化积木拼装、手动编辑模式及开发者特性防掉落常驻守护。",
+  "version": "1.0.0",
+  "author": "KKKomeijiSatori",
+  "homepage": "https://github.com/KKKomeijiSatori/Antigravity-Prompt-Manager",
+  "repository": "https://github.com/KKKomeijiSatori/Antigravity-Prompt-Manager.git",
+  "license": "MIT",
+  "sidecars": [
+    {
+      "name": "prompt_manager",
+      "path": "sidecars/prompt_manager"
+    }
+  ],
+  "skills": [
+    "skills/prompt-manager"
+  ]
+}

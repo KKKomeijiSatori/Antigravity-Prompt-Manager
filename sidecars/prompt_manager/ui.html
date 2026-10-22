@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity 提示词与规则管理器 (Prompt & Rule Manager)</title>
+  <style>
+    :root {
+      --bg: #181825;
+      --card-bg: #1e1e2e;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: #252538;
+      --text: #cdd6f4;
+      --text-muted: #a6adc8;
+      --primary: #89b4fa;
+      --primary-hover: #b4befe;
+      --primary-text: #11111b;
+      --accent: #cba6f7;
+      --highlight: #f9e2af;
+      --highlight-bg: rgba(249, 226, 175, 0.1);
+      --highlight-border: rgba(249, 226, 175, 0.3);
+      --success: #a6e3a1;
+      --warning: #f9e2af;
+      --danger: #f38ba8;
+      --modal-bg: rgba(0, 0, 0, 0.65);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #eff1f5;
+        --card-bg: #ffffff;
+        --card-border: rgba(0, 0, 0, 0.08);
+        --card-hover: #f4f5f9;
+        --text: #4c4f69;
+        --text-muted: #6c6f85;
+        --primary: #1e66f5;
+        --primary-hover: #7287fd;
+        --primary-text: #ffffff;
+        --accent: #8839ef;
+        --highlight: #df8e1d;
+        --highlight-bg: rgba(223, 142, 29, 0.1);
+        --highlight-border: rgba(223, 142, 29, 0.3);
+        --success: #40a02b;
+        --warning: #df8e1d;
+        --danger: #d20f39;
+        --modal-bg: rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    h1 {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button.btn-sm {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      user-select: none;
+    }
+    button.btn-sm:hover {
+      background: var(--card-hover);
+      color: var(--text);
+    }
+    button.btn-sm.active {
+      background: var(--accent);
+      color: var(--primary-text);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .target-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .target-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .target-label {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .auto-sync-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    select.ws-select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    select.ws-select:focus {
+      border-color: var(--primary);
+    }
+    .file-status-badge {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .notice-banner {
+      background: var(--highlight-bg);
+      border: 1px solid var(--highlight-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .notice-banner .icon {
+      font-size: 16px;
+      line-height: 1.2;
+    }
+    .notice-banner .title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--highlight);
+    }
+    .notice-banner .desc {
+      font-size: 11px;
+      color: var(--text);
+      opacity: 0.9;
+      margin-top: 2px;
+    }
+
+    .manage-mode-panel {
+      background: rgba(203, 166, 247, 0.08);
+      border: 1px dashed var(--accent);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .manage-mode-panel.active {
+      display: flex;
+    }
+
+    .preset-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .preset-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .preset-pill:hover {
+      border-color: var(--primary);
+      background: var(--card-hover);
+    }
+    .preset-pill.active {
+      background: var(--primary);
+      color: var(--primary-text);
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    .preset-pill.custom-mode {
+      border-color: var(--highlight);
+      background: var(--highlight-bg);
+      color: var(--highlight);
+      font-weight: 600;
+    }
+    .preset-pill.custom-mode.active {
+      background: var(--highlight);
+      color: #11111b;
+      border-color: var(--highlight);
+    }
+    .preset-pill .pill-edit-btn {
+      opacity: 0.6;
+      font-size: 10px;
+      padding: 0 2px;
+      border-radius: 3px;
+    }
+    .preset-pill .pill-edit-btn:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .snippets-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .category-group {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .category-header {
+      padding: 8px 12px;
+      background: var(--card-hover);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+    .category-body {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .snippet-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .snippet-item:hover {
+      background: var(--card-hover);
+      border-color: var(--card-border);
+    }
+    .snippet-item input[type="checkbox"] {
+      margin-top: 3px;
+      cursor: pointer;
+    }
+    .snippet-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .snippet-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .snippet-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .snippet-tag {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(137, 180, 250, 0.15);
+      color: var(--primary);
+    }
+    .snippet-tag.modified {
+      background: rgba(249, 226, 175, 0.2);
+      color: var(--highlight);
+    }
+    .snippet-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.3;
+      margin-top: 2px;
+    }
+    .snippet-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .editor-section {
+      margin-top: 10px;
+    }
+    .editor-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .editor-quick-inserts {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .editor-area {
+      width: 100%;
+      height: 240px;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: Consolas, "Fira Code", Monaco, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 10px;
+      resize: vertical;
+      outline: none;
+      white-space: pre-wrap;
+      transition: border-color 0.2s;
+    }
+    .editor-area:focus {
+      border-color: var(--primary);
+    }
+    .editor-area.custom-focus {
+      border-color: var(--highlight);
+      box-shadow: 0 0 6px rgba(249, 226, 175, 0.2);
+    }
+
+    .actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: var(--primary-text);
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    .btn-custom-save {
+      background: var(--highlight);
+      color: #11111b;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-custom-save:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--modal-bg);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+      animation: fadeIn 0.15s ease-out;
+    }
+    .modal-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 10px 36px rgba(0,0,0,0.5);
+    }
+    .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: block;
+    }
+    .modal-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    .modal-input:focus {
+      border-color: var(--primary);
+    }
+    .modal-textarea {
+      width: 100%;
+      height: 180px;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: Consolas, monospace;
+      margin-bottom: 12px;
+      outline: none;
+      resize: vertical;
+      line-height: 1.45;
+    }
+    .modal-textarea:focus {
+      border-color: var(--primary);
+    }
+    .modal-checkbox-list {
+      max-height: 140px;
+      overflow-y: auto;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 16px; left: 16px; right: 16px;
+      background: #11111b;
+      color: #ffffff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.15);
+      display: none;
+      z-index: 1001;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧭 提示词与规则管理器</h1>
+    <div class="header-actions">
+      <button class="btn-sm" id="customModeBtn" onclick="activateCustomMode()">📌 自定义模式</button>
+      <button class="btn-sm" id="manageModeBtn" onclick="toggleManageMode()">✏️ 管理预设与积木</button>
+      <button class="btn-sm" onclick="bootstrapAll()">↻ 刷新</button>
+    </div>
+  </header>
+
+  <!-- 目标工作区与范围选择 -->
+  <div class="target-bar">
+    <div class="target-top">
+      <div class="target-label">
+        <span>🎯 规则注入目标:</span>
+      </div>
+      <label class="auto-sync-toggle">
+        <input type="checkbox" id="autoSyncCheck" onchange="toggleAutoSync()">
+        <span>随工作区自动匹配与注入</span>
+      </label>
+    </div>
+    <select id="workspaceSelect" class="ws-select" onchange="onWorkspaceChange()"></select>
+    <div class="file-status-badge">
+      <span id="targetFilePathDisplay">文件: 加载中...</span>
+      <span id="targetFileStatus">检查中...</span>
+    </div>
+  </div>
+
+  <!-- 自定义模式提示横幅 -->
+  <div class="notice-banner" id="customModeBanner" style="display:none;">
+    <div class="icon">📌</div>
+    <div>
+      <div class="title">已切换至自定义手动模式</div>
+      <div class="desc">当前手写编辑框中的内容优先保存生效，不会被预设规则重置覆盖。可直接在下方编辑，也可随时从积木库中单点插入特定段落。</div>
+    </div>
+  </div>
+
+  <!-- 预设与积木管理控制条 -->
+  <div class="manage-mode-panel" id="manageModePanel">
+    <div>
+      <strong style="color:var(--accent);">🛠️ 管理模式已开启</strong>
+      <div style="font-size:11px;color:var(--text-muted);">点击预设 pill 上的 ✏️ 可修改方案；点击下方各个积木的 ✏️ 可直接编辑提示词正文</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn-sm" style="border-color:var(--accent);color:var(--accent);" onclick="openNewPresetModal()">+ 新建方案</button>
+      <button class="btn-sm" style="border-color:var(--accent);color:var(--accent);" onclick="openNewSnippetModal()">+ 新建积木</button>
+      <button class="btn-sm" style="color:var(--danger);" onclick="resetAllDefaults()">↺ 恢复默认</button>
+    </div>
+  </div>
+
+  <!-- 快捷方案预设 -->
+  <div class="section-title">
+    <span>✨ 快捷方案预设</span>
+    <span style="font-size:11px;font-weight:normal;" id="bindingInfo"></span>
+  </div>
+  <div class="preset-pills" id="presetPillsList"></div>
+
+  <!-- 积木式提示词拼装 -->
+  <div class="section-title">
+    <span>🧩 提示词积木库 (点击选择或插入)</span>
+    <span style="font-size:11px;font-weight:normal;color:var(--text-muted);" id="snippetCountInfo"></span>
+  </div>
+  <div class="snippets-container" id="snippetsContainer"></div>
+
+  <!-- Markdown 预览与实时编辑器 -->
+  <div class="editor-section">
+    <div class="editor-toolbar">
+      <div class="section-title" style="margin-bottom:0;">
+        <span>📝 规则文件预览与编辑 (AGENTS.md)</span>
+      </div>
+      <div class="editor-quick-inserts">
+        <button class="btn-sm" onclick="quickInsertSnippet('persona_general_assistant')">+ 通用助手</button>
+        <button class="btn-sm" onclick="quickInsertSnippet('stack_fullstack')">+ 全栈规范</button>
+        <button class="btn-sm" onclick="quickInsertSnippet('rules_file_links')">+ 链接规范</button>
+        <button class="btn-sm" onclick="quickInsertSnippet('rules_no_omissions')">+ 完整交付</button>
+        <button class="btn-sm" style="color:var(--danger);" onclick="clearEditor()">清空</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;">
+        <span id="wordCountDisplay">0 字符</span>
+        <button id="restoreBtn" class="btn-sm" style="display:none;margin-left:8px;" onclick="restoreBackup()">↺ 还原备份</button>
+      </div>
+    </div>
+    <textarea id="agentsEditor" class="editor-area" oninput="onManualEdit()" placeholder="在这里直接手写提示词内容，或点击上方方案/积木进行插入..."></textarea>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn-sm" onclick="reloadCurrentFile()">重载磁盘文件</button>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-custom-save" id="customInjectBtn" onclick="injectAgents(true)">
+        📌 保存并注入 (自定义优先)
+      </button>
+      <button class="btn-primary" id="injectBtn" onclick="injectAgents(false)">
+        🚀 快速注入 (应用选中积木)
+      </button>
+    </div>
+  </div>
+
+  <!-- 方案编辑弹窗 (Preset Modal) -->
+  <div class="modal-overlay" id="presetModal">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span id="presetModalHeader">✏️ 编辑方案预设</span>
+        <button class="btn-sm" onclick="closePresetModal()">✕</button>
+      </div>
+      <input type="hidden" id="presetModalId">
+      <label class="modal-label">方案名称</label>
+      <input type="text" id="presetModalName" class="modal-input" placeholder="例如：🎯 极简全栈规范">
+      <label class="modal-label">方案描述</label>
+      <input type="text" id="presetModalDesc" class="modal-input" placeholder="简要描述该方案的定位与侧重点...">
+      <label class="modal-label">包含的积木片段</label>
+      <div class="modal-checkbox-list" id="presetModalSnippetChecklist"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+        <div id="presetModalLeftActions"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" onclick="closePresetModal()">取消</button>
+          <button class="btn-primary" style="padding:4px 14px;" onclick="savePresetFromModal()">保存方案</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 积木编辑弹窗 (Snippet Modal) -->
+  <div class="modal-overlay" id="snippetModal">
+    <div class="modal-card" style="max-width:560px;">
+      <div class="modal-title">
+        <span id="snippetModalHeader">✏️ 编辑提示词积木</span>
+        <button class="btn-sm" onclick="closeSnippetModal()">✕</button>
+      </div>
+      <input type="hidden" id="snippetModalId">
+      <div style="display:flex;gap:8px;">
+        <div style="flex:2;">
+          <label class="modal-label">积木标题</label>
+          <input type="text" id="snippetModalTitle" class="modal-input" placeholder="片段标题...">
+        </div>
+        <div style="flex:1;">
+          <label class="modal-label">所属分类</label>
+          <select id="snippetModalCategory" class="modal-input" style="cursor:pointer;"></select>
+        </div>
+      </div>
+      <label class="modal-label">简短描述</label>
+      <input type="text" id="snippetModalDesc" class="modal-input" placeholder="描述与适用场景...">
+      <label class="modal-label">提示词正文 Markdown 内容</label>
+      <textarea id="snippetModalContent" class="modal-textarea" style="height:200px;" placeholder="输入正文 Markdown 提示词..."></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <div id="snippetModalLeftActions"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" onclick="closeSnippetModal()">取消</button>
+          <button class="btn-primary" style="padding:4px 14px;" onclick="saveSnippetFromModal()">保存修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toastMsg"></div>
+
+  <script>
+    let appState = {
+      activeWorkspace: '',
+      currentTarget: '',
+      workspaces: [],
+      categories: [],
+      snippets: [],
+      presets: [],
+      bindings: {},
+      selectedSnippetIds: new Set(),
+      activePresetId: null,
+      isManualDirty: false,
+      isManageMode: false,
+      isCustomMode: false
+    };
+
+    function showToast(msg, duration = 4000) {
+      const toast = document.getElementById('toastMsg');
+      toast.innerHTML = msg;
+      toast.style.display = 'block';
+      clearTimeout(toast.__timer);
+      toast.__timer = setTimeout(() => { toast.style.display = 'none'; }, duration);
+    }
+
+    async function bootstrapAll() {
+      try {
+        const queryParams = new URLSearchParams(window.location.search);
+        const convId = queryParams.get('conversationId') || '';
+        const resp = await fetch(`/api/bootstrap?conversationId=${encodeURIComponent(convId)}`);
+        const data = await resp.json();
+
+        appState.activeWorkspace = data.active_workspace || '';
+        appState.workspaces = data.workspaces || [];
+        appState.categories = data.categories || [];
+        appState.snippets = data.snippets || [];
+        appState.presets = data.presets || [];
+        appState.bindings = data.workspace_bindings || {};
+        document.getElementById('autoSyncCheck').checked = data.auto_sync ?? true;
+
+        renderWorkspaceSelect();
+        renderPresetPills();
+        renderSnippets();
+
+        if (!appState.currentTarget) {
+          appState.currentTarget = appState.activeWorkspace || 'global';
+        }
+        await loadWorkspaceState(appState.currentTarget);
+      } catch (e) {
+        showToast('初始化数据失败: ' + e.message);
+      }
+    }
+
+    function toggleManageMode() {
+      appState.isManageMode = !appState.isManageMode;
+      const btn = document.getElementById('manageModeBtn');
+      const panel = document.getElementById('manageModePanel');
+      if (appState.isManageMode) {
+        btn.classList.add('active');
+        btn.innerText = '✕ 退出管理模式';
+        panel.classList.add('active');
+        showToast('🛠️ <b>已进入管理模式</b>：点击预设或积木旁的 ✏️ 即可修改正文！');
+      } else {
+        btn.classList.remove('active');
+        btn.innerText = '✏️ 管理预设与积木';
+        panel.classList.remove('active');
+        showToast('已退出管理模式');
+      }
+      renderPresetPills();
+      renderSnippets();
+    }
+
+    function activateCustomMode() {
+      appState.activePresetId = 'custom_manual';
+      appState.isCustomMode = true;
+      appState.isManualDirty = true;
+      
+      const banner = document.getElementById('customModeBanner');
+      banner.style.display = 'flex';
+      
+      const editor = document.getElementById('agentsEditor');
+      editor.classList.add('custom-focus');
+      editor.focus();
+
+      renderPresetPills();
+      showToast('📌 <b>已切换至自定义模式</b>：当前手写内容优先保存生效。');
+    }
+
+    function renderWorkspaceSelect() {
+      const sel = document.getElementById('workspaceSelect');
+      sel.innerHTML = '';
+
+      if (appState.activeWorkspace) {
+        const optAct = document.createElement('option');
+        optAct.value = appState.activeWorkspace;
+        optAct.innerText = `★ [当前工作区] ${appState.activeWorkspace}`;
+        sel.appendChild(optAct);
+      }
+
+      appState.workspaces.forEach(ws => {
+        if (ws.path.toLowerCase() !== (appState.activeWorkspace || '').toLowerCase()) {
+          const opt = document.createElement('option');
+          opt.value = ws.path;
+          opt.innerText = `📁 ${ws.name} (${ws.path})`;
+          sel.appendChild(opt);
+        }
+      });
+
+      const optGlob = document.createElement('option');
+      optGlob.value = 'global';
+      optGlob.innerText = `🌐 全局规则 (~/.gemini/AGENTS.md)`;
+      sel.appendChild(optGlob);
+
+      sel.value = appState.currentTarget || appState.activeWorkspace || 'global';
+    }
+
+    function renderPresetPills() {
+      const pillsBox = document.getElementById('presetPillsList');
+      pillsBox.innerHTML = '';
+
+      appState.presets.forEach(p => {
+        const btn = document.createElement('div');
+        const isCustom = p.id === 'custom_manual';
+        const isActive = appState.activePresetId === p.id;
+
+        btn.className = `preset-pill ${isCustom ? 'custom-mode' : ''} ${isActive ? 'active' : ''}`;
+        
+        let labelHtml = `<span>${p.name}</span>`;
+        if (p.is_modified) {
+          labelHtml += `<span style="font-size:9px;opacity:0.8;">[已改]</span>`;
+        }
+
+        if (appState.isManageMode && !isCustom) {
+          labelHtml += `<span class="pill-edit-btn" title="编辑此方案" onclick="event.stopPropagation();openEditPresetModal('${p.id}')">✏️</span>`;
+        }
+
+        btn.innerHTML = labelHtml;
+        btn.onclick = () => {
+          if (isCustom) {
+            activateCustomMode();
+          } else {
+            applyPreset(p.id);
+          }
+        };
+        pillsBox.appendChild(btn);
+      });
+    }
+
+    function renderSnippets() {
+      const container = document.getElementById('snippetsContainer');
+      container.innerHTML = '';
+      let totalCount = 0;
+
+      appState.categories.forEach(cat => {
+        const catSnippets = appState.snippets.filter(s => s.category === cat.id);
+        if (catSnippets.length === 0) return;
+        totalCount += catSnippets.length;
+
+        const group = document.createElement('div');
+        group.className = 'category-group';
+
+        const header = document.createElement('div');
+        header.className = 'category-header';
+        header.innerHTML = `<span>${cat.name}</span> <span style="font-size:11px;color:var(--text-muted);">${catSnippets.length} 项</span>`;
+
+        const body = document.createElement('div');
+        body.className = 'category-body';
+
+        catSnippets.forEach(snip => {
+          const item = document.createElement('div');
+          item.className = 'snippet-item';
+
+          const isChecked = appState.selectedSnippetIds.has(snip.id);
+          let tagsHtml = '';
+          if (snip.is_modified) {
+            tagsHtml += `<span class="snippet-tag modified">已修改</span>`;
+          } else if (snip.is_custom) {
+            tagsHtml += `<span class="snippet-tag">自定义</span>`;
+          }
+
+          let actionsHtml = `
+            <button class="btn-sm" style="padding:2px 6px;" title="插入到编辑框光标处" onclick="event.stopPropagation();insertSnippetAtCursor('${snip.id}')">➕ 插入</button>
+            <button class="btn-sm" style="padding:2px 6px;" title="编辑此积木提示词内容" onclick="event.stopPropagation();openEditSnippetModal('${snip.id}')">✏️ 编辑</button>
+          `;
+
+          if (snip.is_modified) {
+            actionsHtml += `<button class="btn-sm" style="color:var(--highlight);padding:2px 6px;" title="恢复出厂默认内容" onclick="event.stopPropagation();resetSnippetDefault('${snip.id}')">↺ 恢复</button>`;
+          } else if (snip.is_custom) {
+            actionsHtml += `<button class="btn-sm" style="color:var(--danger);padding:2px 6px;" title="删除此积木" onclick="event.stopPropagation();deleteSnippetItem('${snip.id}')">✕</button>`;
+          }
+
+          item.innerHTML = `
+            <input type="checkbox" value="${snip.id}" ${isChecked ? 'checked' : ''} onchange="toggleSnippet('${snip.id}', this.checked)">
+            <div class="snippet-info" onclick="toggleSnippet('${snip.id}', !appState.selectedSnippetIds.has('${snip.id}'))">
+              <div class="snippet-title-row">
+                <span class="snippet-title">${escapeHtml(snip.title)}</span>
+                ${tagsHtml}
+              </div>
+              ${snip.description ? `<div class="snippet-desc">${escapeHtml(snip.description)}</div>` : ''}
+            </div>
+            <div class="snippet-actions">
+              ${actionsHtml}
+            </div>
+          `;
+          body.appendChild(item);
+        });
+
+        group.appendChild(header);
+        group.appendChild(body);
+        container.appendChild(group);
+      });
+
+      document.getElementById('snippetCountInfo').innerText = `共 ${totalCount} 个积木可用`;
+    }
+
+    function applyPreset(presetId) {
+      const p = appState.presets.find(x => x.id === presetId);
+      if (!p) return;
+
+      appState.activePresetId = presetId;
+      appState.isCustomMode = false;
+      document.getElementById('customModeBanner').style.display = 'none';
+      document.getElementById('agentsEditor').classList.remove('custom-focus');
+
+      appState.selectedSnippetIds = new Set(p.snippet_ids || []);
+      appState.isManualDirty = false;
+
+      renderPresetPills();
+      renderSnippets();
+      assembleEditorContent();
+      showToast(`已应用方案：${p.name}`);
+    }
+
+    function toggleSnippet(snippetId, checked) {
+      if (checked) {
+        appState.selectedSnippetIds.add(snippetId);
+      } else {
+        appState.selectedSnippetIds.delete(snippetId);
+      }
+
+      if (appState.isCustomMode) {
+        if (checked) {
+          quickInsertSnippet(snippetId);
+        }
+      } else {
+        appState.activePresetId = null;
+        appState.isManualDirty = false;
+        assembleEditorContent();
+      }
+      renderPresetPills();
+      renderSnippets();
+    }
+
+    function assembleEditorContent() {
+      if (appState.isManualDirty) return;
+
+      const selectedList = appState.snippets.filter(s => appState.selectedSnippetIds.has(s.id));
+      const textBlocks = selectedList.map(s => s.content.trim());
+      const fullText = textBlocks.join('\n\n');
+
+      const editor = document.getElementById('agentsEditor');
+      editor.value = fullText;
+      updateWordCount(fullText);
+    }
+
+    function insertSnippetAtCursor(snippetId) {
+      const snip = appState.snippets.find(s => s.id === snippetId);
+      if (!snip) return;
+
+      const editor = document.getElementById('agentsEditor');
+      const startPos = editor.selectionStart;
+      const endPos = editor.selectionEnd;
+      const curVal = editor.value;
+      const insertTxt = '\n\n' + snip.content.trim() + '\n\n';
+
+      editor.value = curVal.substring(0, startPos) + insertTxt + curVal.substring(endPos);
+      editor.focus();
+      editor.selectionStart = editor.selectionEnd = startPos + insertTxt.length;
+
+      appState.isManualDirty = true;
+      updateWordCount(editor.value);
+      showToast(`已插入积木：${snip.title}`);
+    }
+
+    function quickInsertSnippet(snippetId) {
+      insertSnippetAtCursor(snippetId);
+    }
+
+    function clearEditor() {
+      if (!confirm('确定清空当前编辑区内容吗？')) return;
+      const editor = document.getElementById('agentsEditor');
+      editor.value = '';
+      appState.isManualDirty = true;
+      updateWordCount('');
+    }
+
+    function onManualEdit() {
+      appState.isManualDirty = true;
+      updateWordCount(document.getElementById('agentsEditor').value);
+    }
+
+    function updateWordCount(str) {
+      document.getElementById('wordCountDisplay').innerText = `${(str || '').length} 字符 · ${(str || '').split('\n').length} 行`;
+    }
+
+    async function onWorkspaceChange() {
+      const sel = document.getElementById('workspaceSelect');
+      appState.currentTarget = sel.value;
+      await loadWorkspaceState(appState.currentTarget);
+    }
+
+    async function loadWorkspaceState(target) {
+      try {
+        const resp = await fetch(`/api/agents-file?target=${encodeURIComponent(target)}`);
+        const data = await resp.json();
+
+        document.getElementById('targetFilePathDisplay').innerText = `文件: ${data.file_path}`;
+        document.getElementById('targetFileStatus').innerHTML = data.exists 
+          ? `<span style="color:var(--success);">● 已存在 (${data.content.split('\n').length} 行)</span>`
+          : `<span style="color:var(--warning);">○ 暂未创建 (注入时生成)</span>`;
+
+        const restoreBtn = document.getElementById('restoreBtn');
+        if (data.has_backup) {
+          restoreBtn.style.display = 'inline-flex';
+          restoreBtn.title = `可还原至备份: ${data.backup_time || ''}`;
+        } else {
+          restoreBtn.style.display = 'none';
+        }
+
+        const binding = appState.bindings[target];
+        if (binding && (binding.is_custom_priority || binding.preset_id === 'custom_manual')) {
+          appState.isCustomMode = true;
+          appState.activePresetId = 'custom_manual';
+          document.getElementById('customModeBanner').style.display = 'flex';
+          document.getElementById('bindingInfo').innerHTML = `<span style="color:var(--highlight);font-weight:600;">📌 自定义优先模式</span>`;
+          
+          if (data.exists && data.content.trim()) {
+            document.getElementById('agentsEditor').value = data.content;
+          } else if (binding.custom_content) {
+            document.getElementById('agentsEditor').value = binding.custom_content;
+          }
+          appState.isManualDirty = true;
+        } else if (binding) {
+          appState.isCustomMode = false;
+          document.getElementById('customModeBanner').style.display = 'none';
+          document.getElementById('bindingInfo').innerText = `🔗 已绑定方案 (${binding.preset_id || '自定义'})`;
+          appState.selectedSnippetIds = new Set(binding.snippet_ids || []);
+          appState.activePresetId = binding.preset_id || null;
+          appState.isManualDirty = false;
+          assembleEditorContent();
+        } else {
+          appState.isCustomMode = false;
+          document.getElementById('customModeBanner').style.display = 'none';
+          document.getElementById('bindingInfo').innerText = `未单独绑定 (使用默认)`;
+          if (data.exists && data.content.trim()) {
+            document.getElementById('agentsEditor').value = data.content;
+            appState.isManualDirty = true;
+          } else {
+            if (appState.presets[1]) {
+              appState.activePresetId = appState.presets[1].id;
+              appState.selectedSnippetIds = new Set(appState.presets[1].snippet_ids);
+            }
+            appState.isManualDirty = false;
+            assembleEditorContent();
+          }
+        }
+
+        updateWordCount(document.getElementById('agentsEditor').value);
+        renderPresetPills();
+        renderSnippets();
+      } catch (e) {
+        showToast('读取目标文件失败: ' + e.message);
+      }
+    }
+
+    async function reloadCurrentFile() {
+      await loadWorkspaceState(appState.currentTarget);
+      showToast('已重新加载磁盘文件内容');
+    }
+
+    async function injectAgents(isCustomPriority = false) {
+      const btn = isCustomPriority ? document.getElementById('customInjectBtn') : document.getElementById('injectBtn');
+      const origText = btn.innerHTML;
+      btn.innerHTML = '正在保存...';
+      btn.disabled = true;
+
+      const content = document.getElementById('agentsEditor').value;
+      const snippetIds = Array.from(appState.selectedSnippetIds);
+
+      try {
+        const resp = await fetch('/api/inject-agents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target: appState.currentTarget,
+            content: content,
+            snippet_ids: snippetIds,
+            preset_id: isCustomPriority ? 'custom_manual' : appState.activePresetId,
+            is_custom_priority: isCustomPriority,
+            save_as_binding: true
+          })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          const badge = isCustomPriority ? '<span style="color:var(--highlight);">[自定义优先]</span> ' : '';
+          showToast(`✅ ${badge}<b>AGENTS.md 规则已保存并注入生效！</b><br>路径: ${res.file_path} (${res.length} 字符)${res.backup_created ? '<br><small>原文件已自动备份为 .bak</small>' : ''}`, 5000);
+          await bootstrapAll();
+        } else {
+          showToast('❌ 保存失败: ' + (res.error || '未知错误'));
+        }
+      } catch (e) {
+        showToast('❌ 请求失败: ' + e.message);
+      } finally {
+        btn.innerHTML = origText;
+        btn.disabled = false;
+      }
+    }
+
+    async function restoreBackup() {
+      if (!confirm('确定要用备份还原当前 AGENTS.md 吗？')) return;
+      try {
+        const resp = await fetch('/api/restore-backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: appState.currentTarget })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          showToast('✅ 已成功还原备份文件！');
+          await loadWorkspaceState(appState.currentTarget);
+        } else {
+          showToast('❌ 还原失败: ' + res.error);
+        }
+      } catch (e) {
+        showToast('❌ 请求失败: ' + e.message);
+      }
+    }
+
+    async function toggleAutoSync() {
+      const val = document.getElementById('autoSyncCheck').checked;
+      try {
+        await fetch('/api/set-auto-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ auto_sync: val })
+        });
+        showToast(val ? '已开启随工作区自动匹配' : '已关闭随工作区自动匹配');
+      } catch (e) {
+        showToast('更新自动同步失败: ' + e.message);
+      }
+    }
+
+    // --- 方案预设编辑弹窗 (Preset Modal) ---
+    function openNewPresetModal() {
+      document.getElementById('presetModalHeader').innerText = '✨ 新建快捷方案';
+      document.getElementById('presetModalId').value = '';
+      document.getElementById('presetModalName').value = '';
+      document.getElementById('presetModalDesc').value = '';
+      renderPresetModalSnippets(new Set());
+      document.getElementById('presetModalLeftActions').innerHTML = '';
+      document.getElementById('presetModal').style.display = 'flex';
+    }
+
+    function openEditPresetModal(presetId) {
+      const p = appState.presets.find(x => x.id === presetId);
+      if (!p) return;
+
+      document.getElementById('presetModalHeader').innerText = `✏️ 编辑方案：${p.name}`;
+      document.getElementById('presetModalId').value = p.id;
+      document.getElementById('presetModalName').value = p.name;
+      document.getElementById('presetModalDesc').value = p.description || '';
+      renderPresetModalSnippets(new Set(p.snippet_ids || []));
+
+      let leftActions = '';
+      if (p.is_modified) {
+        leftActions += `<button class="btn-sm" style="color:var(--highlight);" onclick="resetPresetDefault('${p.id}')">↺ 恢复此预设默认</button>`;
+      } else if (p.is_custom) {
+        leftActions += `<button class="btn-sm" style="color:var(--danger);" onclick="deletePresetItem('${p.id}')">🗑️ 删除方案</button>`;
+      }
+      document.getElementById('presetModalLeftActions').innerHTML = leftActions;
+      document.getElementById('presetModal').style.display = 'flex';
+    }
+
+    function renderPresetModalSnippets(selectedSet) {
+      const list = document.getElementById('presetModalSnippetChecklist');
+      list.innerHTML = '';
+      appState.snippets.forEach(s => {
+        const row = document.createElement('label');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;';
+        const checked = selectedSet.has(s.id) ? 'checked' : '';
+        row.innerHTML = `<input type="checkbox" class="preset-snip-chk" value="${s.id}" ${checked}> <span>${escapeHtml(s.title)}</span>`;
+        list.appendChild(row);
+      });
+    }
+
+    function closePresetModal() {
+      document.getElementById('presetModal').style.display = 'none';
+    }
+
+    async function savePresetFromModal() {
+      const id = document.getElementById('presetModalId').value.trim();
+      const name = document.getElementById('presetModalName').value.trim();
+      const desc = document.getElementById('presetModalDesc').value.trim();
+      if (!name) {
+        alert('请填写方案名称');
+        return;
+      }
+
+      const chks = document.querySelectorAll('.preset-snip-chk:checked');
+      const snippetIds = Array.from(chks).map(c => c.value);
+
+      try {
+        const resp = await fetch('/api/save-preset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            preset: { id: id || undefined, name, description: desc, snippet_ids: snippetIds }
+          })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          closePresetModal();
+          showToast(`✅ 方案【${name}】已保存！`);
+          await bootstrapAll();
+        } else {
+          alert('保存失败: ' + res.error);
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      }
+    }
+
+    async function deletePresetItem(id) {
+      if (!confirm('确定要删除此预设方案吗？')) return;
+      try {
+        const resp = await fetch('/api/delete-preset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          closePresetModal();
+          showToast('方案已删除');
+          await bootstrapAll();
+        }
+      } catch (e) {
+        alert('删除失败: ' + e.message);
+      }
+    }
+
+    async function resetPresetDefault(id) {
+      if (!confirm('确定将此方案恢复至出厂默认配置吗？')) return;
+      try {
+        const resp = await fetch('/api/reset-item', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'preset', id })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          closePresetModal();
+          showToast('方案已恢复默认配置');
+          await bootstrapAll();
+        }
+      } catch (e) {
+        alert('恢复失败: ' + e.message);
+      }
+    }
+
+    // --- 积木片段编辑弹窗 (Snippet Modal) ---
+    function openNewSnippetModal() {
+      document.getElementById('snippetModalHeader').innerText = '✨ 新建提示词积木';
+      document.getElementById('snippetModalId').value = '';
+      document.getElementById('snippetModalTitle').value = '';
+      document.getElementById('snippetModalDesc').value = '';
+      document.getElementById('snippetModalContent').value = '';
+      renderSnippetCategoriesSelect('custom');
+      document.getElementById('snippetModalLeftActions').innerHTML = '';
+      document.getElementById('snippetModal').style.display = 'flex';
+    }
+
+    function openEditSnippetModal(snippetId) {
+      const s = appState.snippets.find(x => x.id === snippetId);
+      if (!s) return;
+
+      document.getElementById('snippetModalHeader').innerText = `✏️ 编辑积木：${s.title}`;
+      document.getElementById('snippetModalId').value = s.id;
+      document.getElementById('snippetModalTitle').value = s.title;
+      document.getElementById('snippetModalDesc').value = s.description || '';
+      document.getElementById('snippetModalContent').value = s.content || '';
+      renderSnippetCategoriesSelect(s.category);
+
+      let leftActions = '';
+      if (s.is_modified) {
+        leftActions += `<button class="btn-sm" style="color:var(--highlight);" onclick="resetSnippetDefault('${s.id}')">↺ 恢复默认内容</button>`;
+      } else if (s.is_custom) {
+        leftActions += `<button class="btn-sm" style="color:var(--danger);" onclick="deleteSnippetItem('${s.id}')">🗑️ 删除此积木</button>`;
+      }
+      document.getElementById('snippetModalLeftActions').innerHTML = leftActions;
+      document.getElementById('snippetModal').style.display = 'flex';
+    }
+
+    function renderSnippetCategoriesSelect(selectedCat) {
+      const sel = document.getElementById('snippetModalCategory');
+      sel.innerHTML = '';
+      appState.categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.innerText = c.name;
+        if (c.id === selectedCat) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    function closeSnippetModal() {
+      document.getElementById('snippetModal').style.display = 'none';
+    }
+
+    async function saveSnippetFromModal() {
+      const id = document.getElementById('snippetModalId').value.trim();
+      const title = document.getElementById('snippetModalTitle').value.trim();
+      const cat = document.getElementById('snippetModalCategory').value;
+      const desc = document.getElementById('snippetModalDesc').value.trim();
+      const content = document.getElementById('snippetModalContent').value.trim();
+
+      if (!title || !content) {
+        alert('请填写积木标题和正文 Markdown 内容');
+        return;
+      }
+
+      try {
+        const resp = await fetch('/api/save-snippet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            snippet: { id: id || undefined, category: cat, title, description: desc, content }
+          })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          closeSnippetModal();
+          showToast(`✅ 积木【${title}】已保存！`);
+          await bootstrapAll();
+        } else {
+          alert('保存失败: ' + res.error);
+        }
+      } catch (e) {
+        alert('请求失败: ' + e.message);
+      }
+    }
+
+    async function deleteSnippetItem(id) {
+      if (!confirm('确定要删除此积木吗？')) return;
+      try {
+        const resp = await fetch('/api/delete-snippet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          closeSnippetModal();
+          showToast('积木已删除');
+          appState.selectedSnippetIds.delete(id);
+          await bootstrapAll();
+        }
+      } catch (e) {
+        alert('删除失败: ' + e.message);
+      }
+    }
+
+    async function resetSnippetDefault(id) {
+      if (!confirm('确定将此积木恢复至出厂默认提示词吗？')) return;
+      try {
+        const resp = await fetch('/api/reset-item', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'snippet', id })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          closeSnippetModal();
+          showToast('积木已恢复默认内容');
+          await bootstrapAll();
+        }
+      } catch (e) {
+        alert('恢复失败: ' + e.message);
+      }
+    }
+
+    async function resetAllDefaults() {
+      if (!confirm('⚠️ 确定将所有预设与积木重置为出厂初始状态吗？\n你的所有自定义修改将被重置。')) return;
+      try {
+        const resp = await fetch('/api/reset-item', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'all' })
+        });
+        const res = await resp.json();
+        if (res.ok) {
+          showToast('已重置所有预设和积木为初始状态');
+          await bootstrapAll();
+        }
+      } catch (e) {
+        alert('重置失败: ' + e.message);
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    // 初始化
+    bootstrapAll();
+  </script>
+</body>
+</html>
